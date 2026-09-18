@@ -5,8 +5,8 @@ function App() {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [loading, setLoading] = useState(true);
 
-  // Since we haven't dockerized yet, the backend will run on localhost:5000
-  const API_URL = 'http://localhost:5000/api/tasks';
+  // Use environment variable if provided (via Docker/Vite), otherwise fallback to localhost
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/tasks';
 
   useEffect(() => {
     fetchTasks();

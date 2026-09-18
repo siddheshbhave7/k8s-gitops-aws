@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: task-tracker-frontend
+  namespace: default
+  labels:
+    app: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: siddheshbhave7/task-tracker-frontend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          env:
+            # We assume the frontend calls the backend service internally or via ingress
+            # If the React app makes calls directly from the browser, we'll expose the backend as NodePort as well,
+            # or handle it via Ingress. For now, we deploy the pods.
+            - name: VITE_API_URL
+              value: "http://backend-service:5000"
