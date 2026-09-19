@@ -11,7 +11,8 @@ The project consists of a full-stack Task Tracker application deployed onto a Ku
 3. **Containerization:** Multi-stage Docker builds (Nginx for frontend, Alpine Node for backend).
 4. **Continuous Integration (CI):** GitHub Actions pipeline that automatically builds and pushes Docker images to Docker Hub on every push to `main`.
 5. **Continuous Deployment (CD):** ArgoCD monitors this repository and automatically synchronizes the Kubernetes manifests to a live cluster.
-6. **Infrastructure:** Local Ubuntu server running a lightweight Kubernetes distribution (k3s). *(Note: AWS Terraform configurations are also available in the `terraform/` directory for cloud deployments).*
+6. **Monitoring & Observability:** Prometheus and Grafana deployed via native Helm to track cluster metrics and resource utilization independently of the application lifecycle.
+7. **Infrastructure:** Local Ubuntu server running a lightweight Kubernetes distribution (k3s). *(Note: AWS Terraform configurations are also available in the `terraform/` directory for cloud deployments).*
 
 ---
 
@@ -80,6 +81,24 @@ spec:
 ```
 3. ArgoCD will automatically deploy the frontend (exposed via NodePort `30080`) and backend (exposed via NodePort `30005`).
 
+### 3. Deploy Monitoring (Prometheus & Grafana)
+We intentionally deploy the monitoring stack outside of the GitOps pipeline as a separate platform service using native Helm commands. This ensures that monitoring remains functional even if ArgoCD experiences an outage.
+
+```bash
+# Add the Prometheus community Helm repository
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+
+# Install the Kube-Prometheus-Stack
+helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+  --namespace monitoring \
+  --create-namespace \
+  --set grafana.service.type=NodePort \
+  --set grafana.service.nodePort=30090 \
+  --set grafana.adminPassword="admin"
+```
+*Access Grafana at `http://<YOUR-NODE-IP>:30090` with the credentials `admin/admin`.*
+
 ---
 
 ## 💡 Key Features Implemented
@@ -87,3 +106,4 @@ spec:
 * **Dynamic Environment Variables:** The React frontend dynamically determines the API URL based on the browser's current hostname (`window.location.hostname`), eliminating hardcoded IP addresses and making the app portable across different local network IPs.
 * **Multi-Stage Builds:** The frontend Docker image compiles the React app using Node.js, but serves the static files using a lightweight Nginx image, drastically reducing the final image size and improving security.
 * **Layer Caching:** The CI pipeline utilizes Docker Buildx layer caching (`cache-from`/`cache-to`) to Docker Hub, reducing subsequent pipeline execution times.
+* **Separation of Concerns (Platform vs App):** Application deployments are fully automated via GitOps (ArgoCD), while critical platform infrastructure (Prometheus/Grafana) is managed natively (Helm). This deliberate architecture prevents a bad application deployment pipeline from taking down cluster observability.
